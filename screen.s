@@ -131,11 +131,9 @@ init_ssi_gpio
 	LDR R0, [R1]
 	ORR R0, #0x01
 	STR R0, [R1]
-check_ssi
-	LDR R1, =PRSSI
-	LDR R0, [R1]
-	ANDS R0, R0, #0x01
-	BEQ check_ssi
+	NOP
+	NOP
+	NOP
 
 	LDR R1, =RCGCGPIO
 	LDR R0, [R1]
@@ -163,7 +161,7 @@ check_ssi
 	BIC R0, #0x06
 	STR R0, [R1]
 	LDR R1, =SSI0_CPSR
-	MOV R0, #0x40
+	MOV R0, #0x04
 	STR R0, [R1]
 	LDR R1, =SSI0_CR0
 	MOV R0, #0x07
