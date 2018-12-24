@@ -1,2 +1,4 @@
 *.uvguix.*
-Objects/
+keil/Objects/
+keil/Listings/
+
