@@ -397,6 +397,16 @@
               <FileType>2</FileType>
               <FilePath>..\Startup.s</FilePath>
             </File>
+            <File>
+              <FileName>pot.s</FileName>
+              <FileType>2</FileType>
+              <FilePath>..\pot.s</FilePath>
+            </File>
+            <File>
+              <FileName>gfx.s</FileName>
+              <FileType>2</FileType>
+              <FilePath>..\gfx.s</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

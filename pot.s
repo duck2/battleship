@@ -1,0 +1,220 @@
+; drive the potentiometers as joysticks
+; uses both ADC0 and ADC1 to sample POT values.
+; uses an interrupt handler to copy into global value.
+; pot pins:
+; POTx -> PE2
+; POTy -> PE3
+
+RCGCADC EQU 0x400FE638
+RCGCGPIO EQU 0x400FE608
+
+PORTE_AFSEL EQU 0x40024420
+PORTE_DEN EQU 0x4002451C
+PORTE_AMSEL EQU 0x40024528
+
+ADC0_ACTSS EQU 0x40038000
+ADC1_ACTSS EQU 0x40039000
+ADC0_EMUX EQU 0x40038014
+ADC1_EMUX EQU 0x40039014
+ADC0_SSCTL1 EQU 0x40038064
+ADC1_SSCTL2 EQU 0x40039084
+ADC0_SSMUX1 EQU 0x40038060
+ADC1_SSMUX2 EQU 0x40039080
+ADC0_PC EQU 0x40038FC4
+ADC1_PC EQU 0x40039FC4
+ADC0_IM EQU 0x40038008
+ADC1_IM EQU 0x40039008
+ADC0_PSSI EQU 0x40038028
+ADC1_PSSI EQU 0x40039028
+ADC1_SPC EQU 0x40039024
+ADC0_ISC EQU 0x4003800C
+ADC1_ISC EQU 0x4003900C
+ADC0_SSFIFO1 EQU 0x40038068
+ADC1_SSFIFO2 EQU 0x40039088
+	
+NVIC_EN0 EQU 0xE000E100
+NVIC_EN1 EQU 0xE000E104
+
+; hold global vars
+	AREA |.data|, READWRITE, DATA
+	EXPORT potx_value
+	EXPORT poty_value
+
+potx_value DCD 0
+poty_value DCD 0
+
+	AREA |.text|, READONLY, CODE, ALIGN=2
+	EXPORT ADC0Seq1_Handler
+	EXPORT ADC1Seq2_Handler
+	EXPORT init_pots
+	THUMB
+
+; copy ADC value into global variable, return.
+; note that ADC0 samples POTy, ADC1 samples POTx.
+ADC0Seq1_Handler
+	LDR R1, =ADC0_SSFIFO1
+	LDR R0, [R1]
+	LDR R2, =poty_value
+	MOV R3, #47
+	MUL R0, R0, R3
+	MOV R3, #0xFFF
+	UDIV R0, R0, R3
+	STR R0, [R2]
+	LDR R1, =ADC0_ISC
+	MOV R0, #0x02
+	STR R0, [R1]
+	BX LR
+
+ADC1Seq2_Handler
+	LDR R1, =ADC1_SSFIFO2
+	LDR R0, [R1]
+	LDR R2, =potx_value
+	MOV R3, #83
+	MUL R0, R0, R3
+	MOV R3, #0xFFF
+	UDIV R0, R0, R3
+	STR R0, [R2]
+	LDR R1, =ADC1_ISC
+	MOV R0, #0x04
+	STR R0, [R1]
+	BX LR
+
+; for now, just call init_adc_gpio
+init_pots
+	PUSH {LR}
+	BL init_adc_gpio
+	POP {LR}
+	BX LR
+
+; 1. initialize ADC clock
+; 2. initialize GPIO clock
+; 3. set AFSEL bits on PE2, PE3: 0b00001100
+; 4. clear DEN bits on PE2, PE3
+; 5. set AMSEL bits on PE2, PE3
+; 6. disable all sequencers on ADC0 and ADC1: ACTSS
+; 7. sample continuously on ADC0_SS1, ADC1_SS2: EMUX
+; 8. enable interrupts & end sequence on first sample: SSCTL
+; 9. use AIN0(PE3) for ADC0_SS1, AIN1(PE2) for ADC1_SS2: SSMUX
+; 10. set 125 Ks/s for each ADC: PC
+; 11. unmask interrupts for ADC0_SS1, ADC1_SS2: IM
+; 12. enable NVIC interrupts for ADC0_SS1(bit 15)
+; 13. enable NVIC interrupts for ADC1_SS2(bit 50: 18)
+; 14. enable sampling for each ADC: ACTSS
+; 15. trigger sampling, set GSYNC, SYNCWAIT
+; 16. set 180° phase shift b/w ADC0 and ADC1
+init_adc_gpio
+	LDR	R1, =RCGCADC
+	LDR	R0, [R1]
+	ORR	R0, #0x03
+	STR	R0, [R1]
+	NOP
+	NOP
+
+	LDR R1, =RCGCGPIO
+	LDR R0, [R1]
+	ORR R0, #0x10
+	STR R0, [R1]
+	NOP
+	NOP
+
+	LDR	R1, =PORTE_AFSEL
+	MOV	R0, #0x0C
+	STR	R0, [R1]
+	LDR	R1, =PORTE_DEN
+	MOV R0, #0x0
+	STR R0, [R1]
+	LDR	R1, =PORTE_AMSEL
+	MOV	R0, #0x0C
+	STR	R0, [R1]
+
+	LDR	R1, =ADC0_ACTSS
+	LDR	R0, [R1]
+	BIC	R0, #0x0F
+	STR	R0, [R1]
+	LDR	R1, =ADC1_ACTSS
+	LDR	R0, [R1]
+	BIC	R0, #0x0F
+	STR	R0, [R1]
+
+	LDR	R1, =ADC0_EMUX
+	LDR	R0, [R1]
+	ORR	R0, #0x0000
+	STR	R0, [R1]
+	LDR	R1, =ADC1_EMUX
+	LDR	R0, [R1]
+	ORR	R0, #0x0000
+	STR	R0, [R1]
+
+	LDR	R1, =ADC0_SSCTL1
+	LDR	R0, [R1]
+	LDR	R0, =0x0006
+	STR	R0, [R1]
+	LDR	R1, =ADC1_SSCTL2
+	LDR	R0, [R1]
+	LDR	R0, =0x0006
+	STR	R0, [R1]
+
+	LDR	R1, =ADC0_SSMUX1
+	LDR	R0, [R1]
+	MOV	R0, #0x0000
+	STR	R0, [R1]
+	LDR	R1, =ADC1_SSMUX2
+	LDR	R0, [R1]
+	MOV R0, #0x1111
+	STR	R0, [R1]
+
+	LDR	R1, =ADC0_PC
+	LDR	R0, [R1]
+	ORR	R0, #0x01
+	STR	R0, [R1]
+	LDR	R1, =ADC1_PC
+	LDR	R0, [R1]
+	ORR	R0, #0x01
+	STR	R0, [R1]
+
+	LDR R1, =ADC0_IM
+	LDR R0, [R1]
+	ORR R0, #0x0F
+	STR R0, [R1]
+	LDR R1, =ADC1_IM
+	LDR R0, [R1]
+	ORR R0, #0x0F
+	STR R0, [R1]
+
+	LDR R1, =NVIC_EN0
+	LDR R0, [R1]
+	ORR R0, #0x00008000
+	STR R0, [R1]
+	LDR R1, =NVIC_EN1
+	LDR R0, [R1]
+	ORR R0, #0x00040000
+	STR R0, [R1]
+
+	LDR R1, =ADC0_ACTSS
+	LDR R0, [R1]
+	ORR R0, #0x02
+	STR R0, [R1]
+	LDR R1, =ADC1_ACTSS
+	LDR R0, [R1]
+	ORR R0, #0x04
+	STR R0, [R1]
+
+	LDR R1, =ADC0_PSSI
+	LDR R0, [R1]
+	LDR R2, =0x88000002
+	ORR R0, R0, R2
+	STR R0, [R1]
+	LDR R1, =ADC1_PSSI
+	LDR R0, [R1]
+	LDR R2, =0x88000004
+	ORR R0, R0, R2
+	STR R0, [R1]
+
+	LDR R1, =ADC1_SPC
+	LDR R0, [R1]
+	MOV R0, #0x08
+	STR R0, [R1]
+
+	BX LR
+
+	END

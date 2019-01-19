@@ -25,6 +25,8 @@ SSI0_SR EQU 0x4000800C
 
 	AREA |.text|, READONLY, CODE, ALIGN=2
 	EXPORT init_screen
+	EXPORT send_spi_byte
+	EXPORT reset_screen_addr
 	THUMB
 
 ; 1. initialize SSI module
@@ -46,7 +48,7 @@ init_screen
 	BIC R0, #0x80
 	STR R0, [R1]
 
-	LDR R5, =100000
+	LDR R5, =1000000
 L	SUBS R5, R5, #1
 	BNE L
 
@@ -112,6 +114,25 @@ send_spi_byte
 L2	LDR R0, [R1]
 	ANDS R0, R0, #0x10
 	BNE L2
+	BX LR
+
+; this is probably the only command required after initialization
+; set DC=0, send 0x80(set X to 0), set DC=1
+reset_screen_addr
+	PUSH {LR}
+	LDR R1, =GPIOA_DATA
+	LDR R0, [R1]
+	BIC R0, #0x40
+	STR R0, [R1]
+
+	MOV R0, #0x80
+	BL send_spi_byte
+
+	LDR R1, =GPIOA_DATA
+	LDR R0, [R1]
+	ORR R0, #0x40
+	STR R0, [R1]
+	POP {LR}
 	BX LR
 
 ; 1. initialize SSI clock
