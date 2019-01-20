@@ -62,6 +62,11 @@ init_timer	PROC
 			LDR		R0,[R1]
 			ORR		R0,#0X01
 			STR		R0,[R1]
+			
+			LDR		R1,=NVIC_EN2		;NVIC 94
+			MOV32	R0, 0X4000000
+			STR		R0,[R1]
+			
 			ENDP
 		ALIGN 
 		END

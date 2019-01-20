@@ -98,6 +98,10 @@ init_button	LDR		R1,=SYSCTL_RCGCGPIO
 			ORR		R0,#0X11
 			STR		R0,[R1]
 			
+			LDR		R1,=NVIC_EN0		;NVIC 30
+			MOV32	R0, #0X40000000
+			STR		R0,[R1]
+			
 			BX LR
 	
 	ALIGN
