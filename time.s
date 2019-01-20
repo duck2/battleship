@@ -10,12 +10,13 @@ WTIMER0_IMR			EQU		0x40036018
 
 
 	AREA |.text|, READONLY, CODE, ALIGN=2
-	EXTERN	_main
+	EXTERN	__main
 	EXPORT	WideTimer0A_Handler
 	EXPORT init_timer
 	THUMB
 		
-WideTimer0A_Handler	LDR R1,=COUNT_ADR
+WideTimer0A_Handler	
+			LDR 	R1,=COUNT_ADR
 			LDR		R0,[R1]
 			SUBS	R0,#1
 			BEQ		time_over
@@ -26,15 +27,8 @@ WideTimer0A_Handler	LDR R1,=COUNT_ADR
 			MOV		R3,#4
 			MUL		R0,R2,R3
 			ADD		R2,R1,R0
-			PUSH	{LR}
-			BL		draw_sprite
-			POP		{LR}
 			
-			
-time_over	
-
-
-			BX __main
+			BX 		LR
 ; TImer is configured to count a duration of 1 second, 
 ;and generate an interrupt
 ;
