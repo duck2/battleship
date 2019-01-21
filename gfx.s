@@ -43,6 +43,7 @@ numbers
 
 ; draw the battle arena: a big rectangle
 draw_arena
+	PUSH {LR}
 	LDR R2, =FB_ADDR+84+6
 	MOV R3, #64
 L2	LDRB R0, [R2]
@@ -71,6 +72,7 @@ L4	LDRB R0, [R2]
 	STRB R0, [R2], #84
 	STRB R0, [R2], #84
 	STRB R0, [R2], #84
+	POP {LR}
 	BX LR
 
 ; blit single byte to framebuffer. R0=X, R1=Y, R2=byte.
@@ -152,12 +154,14 @@ draw_digit
 	BX LR
 
 clear_frame
+	PUSH {LR}
 	LDR R2, =FB_ADDR
 	MOV R3, #504
 	MOV R0, #0x00
 L3	STRB R0, [R2], #1
 	SUBS R3, R3, #1
 	BNE L3
+	POP {LR}
 	BX LR
 
 send_frame

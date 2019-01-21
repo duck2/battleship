@@ -31,53 +31,10 @@ ADC0_ISC EQU 0x4003800C
 ADC1_ISC EQU 0x4003900C
 ADC0_SSFIFO1 EQU 0x40038068
 ADC1_SSFIFO2 EQU 0x40039088
-	
-NVIC_EN0 EQU 0xE000E100
-NVIC_EN1 EQU 0xE000E104
-
-; hold global vars
-	AREA |.data|, READWRITE, DATA
-	EXPORT potx_value
-	EXPORT poty_value
-
-potx_value DCD 0
-poty_value DCD 0
 
 	AREA |.text|, READONLY, CODE, ALIGN=2
-	EXPORT ADC0Seq1_Handler
-	EXPORT ADC1Seq2_Handler
 	EXPORT init_pots
 	THUMB
-
-; copy ADC value into global variable, return.
-; note that ADC0 samples POTy, ADC1 samples POTx.
-ADC0Seq1_Handler
-	LDR R1, =ADC0_SSFIFO1
-	LDR R0, [R1]
-	LDR R2, =poty_value
-	MOV R3, #47
-	MUL R0, R0, R3
-	MOV R3, #0xFFF
-	UDIV R0, R0, R3
-	STR R0, [R2]
-	LDR R1, =ADC0_ISC
-	MOV R0, #0x02
-	STR R0, [R1]
-	BX LR
-
-ADC1Seq2_Handler
-	LDR R1, =ADC1_SSFIFO2
-	LDR R0, [R1]
-	LDR R2, =potx_value
-	MOV R3, #83
-	MUL R0, R0, R3
-	MOV R3, #0xFFF
-	UDIV R0, R0, R3
-	STR R0, [R2]
-	LDR R1, =ADC1_ISC
-	MOV R0, #0x04
-	STR R0, [R1]
-	BX LR
 
 ; for now, just call init_adc_gpio
 init_pots
@@ -171,24 +128,6 @@ init_adc_gpio
 	LDR	R0, [R1]
 	ORR	R0, #0x01
 	STR	R0, [R1]
-
-	LDR R1, =ADC0_IM
-	LDR R0, [R1]
-	ORR R0, #0x0F
-	STR R0, [R1]
-	LDR R1, =ADC1_IM
-	LDR R0, [R1]
-	ORR R0, #0x0F
-	STR R0, [R1]
-
-	LDR R1, =NVIC_EN0
-	LDR R0, [R1]
-	ORR R0, #0x00008000
-	STR R0, [R1]
-	LDR R1, =NVIC_EN1
-	LDR R0, [R1]
-	ORR R0, #0x00040000
-	STR R0, [R1]
 
 	LDR R1, =ADC0_ACTSS
 	LDR R0, [R1]

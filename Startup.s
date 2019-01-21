@@ -79,8 +79,6 @@ __heap_limit
 ;
 ;******************************************************************************
         AREA    RESET, CODE, READONLY
-		EXTERN ADC0Seq1_Handler
-		EXTERN ADC1Seq2_Handler
         THUMB
 
 ;******************************************************************************
@@ -354,7 +352,7 @@ IntDefaultHandler\
                 EXPORT  PWM0Generator2_Handler    [WEAK]
                 EXPORT  Quadrature0_Handler       [WEAK]
                 EXPORT  ADC0Seq0_Handler          [WEAK]
-;               EXPORT  ADC0Seq1_Handler          [WEAK]
+                EXPORT  ADC0Seq1_Handler          [WEAK]
                 EXPORT  ADC0Seq2_Handler          [WEAK]
                 EXPORT  ADC0Seq3_Handler          [WEAK]
                 EXPORT  WDT_Handler               [WEAK]
@@ -389,7 +387,7 @@ IntDefaultHandler\
                 EXPORT  uDMA_Error                [WEAK]
                 EXPORT  ADC1Seq0_Handler          [WEAK]
                 EXPORT  ADC1Seq1_Handler          [WEAK]
-;               EXPORT  ADC1Seq2_Handler          [WEAK]
+                EXPORT  ADC1Seq2_Handler          [WEAK]
                 EXPORT  ADC1Seq3_Handler          [WEAK]
                 EXPORT  I2S0_Handler              [WEAK]
                 EXPORT  ExtBus_Handler            [WEAK]
@@ -469,7 +467,7 @@ PWM0Generator1_Handler
 PWM0Generator2_Handler
 Quadrature0_Handler
 ADC0Seq0_Handler
-;ADC0Seq1_Handler
+ADC0Seq1_Handler
 ADC0Seq2_Handler
 ADC0Seq3_Handler
 WDT_Handler
@@ -504,7 +502,7 @@ uDMA_Handler
 uDMA_Error
 ADC1Seq0_Handler
 ADC1Seq1_Handler
-;ADC1Seq2_Handler
+ADC1Seq2_Handler
 ADC1Seq3_Handler
 I2S0_Handler
 ExtBus_Handler
