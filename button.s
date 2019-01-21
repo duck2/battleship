@@ -13,30 +13,30 @@ PORTF_IM		EQU		0X40025410
 SYSCTL_RCGCGPIO	EQU		0X400FE608
 
 	AREA |.data|, READWRITE, DATA
-	EXPORT place_btn_flag
-	EXPORT toggle_btn_flag
-place_btn_flag DCD 0
-toggle_btn_flag DCD 0
+	EXPORT battleship_btn_flag
+	EXPORT civship_btn_flag
+battleship_btn_flag DCD 0
+civship_btn_flag DCD 0
 
 	AREA |.text|, READONLY, CODE, ALIGN=2
-	EXPORT init_button
+	EXPORT init_buttons
 	THUMB
 		
 GPIOPortF_Handler PROC
 			LDR		R1,=PORTF_MIS
 			LDR		R0,[R1]
 			ANDS	R0,#0X01
-			BNE		placement
+			BNE		battleship
 			ANDS	R0,#0X10
-			BNE		ship_change
+			BNE		civship
 			B		ok
 			
-ship_change	LDR		R1,=toggle_btn_flag
+civship		LDR		R1,=civship_btn_flag
 			MOV		R0, #0x1
 			STR		R0,[R1]
 			B		ok
 			
-placement	LDR		R1,=place_btn_flag
+battleship	LDR		R1,=battleship_btn_flag
 			MOV		R0, #0x1
 			STR		R0,[R1]
 			
@@ -48,14 +48,17 @@ ok			LDR		R1,=PORTF_ICR
 			BX 		LR
 			ENDP
 
-init_button	LDR		R1,=SYSCTL_RCGCGPIO
+init_buttons
+			LDR		R1,=SYSCTL_RCGCGPIO
 			LDR		R0,[R1]
-			ORR		R0,#0X10
+			ORR		R0,#0x20
 			STR		R0,[R1]
+			NOP
+			NOP
+			NOP
 			
 			LDR		R1,=PORTF_LOCK
-			LDR		R0,[R1]
-			MOV32	R0,#0X4C4F434B
+			LDR		R0,=0X4C4F434B
 			STR		R0,[R1]
 			
 			LDR		R1,=PORTF_CR
