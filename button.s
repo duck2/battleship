@@ -11,32 +11,36 @@ PORTF_IEV		EQU		0X4002540C
 PORTF_IM		EQU		0X40025410
 
 SYSCTL_RCGCGPIO	EQU		0X400FE608
-	
-	AREA |.text|, READONLY, CODE, ALIGN=2
 
+	AREA |.data|, READWRITE, DATA
+	EXPORT place_btn_flag
+	EXPORT toggle_btn_flag
+place_btn_flag DCD 0
+toggle_btn_flag DCD 0
+
+	AREA |.text|, READONLY, CODE, ALIGN=2
 	EXPORT init_button
 	THUMB
 		
-GPIOPortF_Handler 
-			PROC
+GPIOPortF_Handler PROC
 			LDR		R1,=PORTF_MIS
 			LDR		R0,[R1]
 			ANDS	R0,#0X01
 			BNE		placement
 			ANDS	R0,#0X10
-			BEQ		phant_press
+			BNE		ship_change
+			B		ok
 			
-ship_change	LDR		R1,=PRESS_FLAGS
-			LDR		R0,[R1]
-			ORR		R0,#0X01
+ship_change	LDR		R1,=toggle_btn_flag
+			MOV		R0, #0x1
+			STR		R0,[R1]
+			B		ok
+			
+placement	LDR		R1,=place_btn_flag
+			MOV		R0, #0x1
 			STR		R0,[R1]
 			
-placement	LDR		R1,=PRESS_FLAGS
-			LDR		R0,[R1]
-			ORR		R0,#0X10
-			STR		R0,[R1]
-			
-phant_press	LDR		R1,=GPIOF_ICR
+ok			LDR		R1,=PORTF_ICR
 			LDR		R0,[R1]
 			BIC		R0,#0X01
 			STR		R0,[R1]
@@ -84,7 +88,7 @@ init_button	LDR		R1,=SYSCTL_RCGCGPIO
 			BIC		R0,#0X11
 			STR		R0,[R1]
 			
-			LDR		R1,=GPIO_IM
+			LDR		R1,=PORTF_IM
 			LDR		R0,[R1]
 			ORR		R0,#0X11
 			STR		R0,[R1]

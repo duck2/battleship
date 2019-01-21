@@ -8,6 +8,9 @@ WTIMER0_TAMR		EQU		0x40036004
 WTIMERO_ILR			EQU		0x40036028
 WTIMER0_IMR			EQU		0x40036018
 
+	AREA |.data|, READWRITE, DATA
+	EXPORT countdown
+countdown DCD 0
 
 	AREA |.text|, READONLY, CODE, ALIGN=2
 	EXTERN	__main
@@ -16,17 +19,10 @@ WTIMER0_IMR			EQU		0x40036018
 	THUMB
 		
 WideTimer0A_Handler	
-			LDR 	R1,=COUNT_ADR
-			LDR		R0,[R1]
+			LDR 	R1,=countdown
+			LDR		R0, [R1]
 			SUBS	R0,#1
-			BEQ		time_over
-			STR		R0,[R1]
-			MOV		R1,#10						; sayilari nasil yazdiriyosun ekrana
-			UDIV	R2,R0,R1					;sag üst koseye yani
-			LDR		R1,=numbers
-			MOV		R3,#4
-			MUL		R0,R2,R3
-			ADD		R2,R1,R0
+			STR		R0, [R1]
 			
 			BX 		LR
 ; TImer is configured to count a duration of 1 second, 
