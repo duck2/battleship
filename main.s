@@ -36,6 +36,7 @@ ship4_type DCD 0
 	EXTERN init_screen
 	EXTERN init_pots
 	EXTERN init_buttons
+	EXTERN init_timer
 	EXTERN clear_frame
 	EXTERN draw_arena
 	EXTERN draw_cursor
@@ -50,6 +51,7 @@ __main
 	BL init_screen
 	BL init_pots
 	BL init_buttons
+	BL init_timer
 	MOV R12, #deploy_ships
 
 _input

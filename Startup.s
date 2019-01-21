@@ -87,6 +87,8 @@ __heap_limit
 ;
 ;******************************************************************************
         EXPORT  __Vectors
+		EXTERN	GPIOPortF_Handler
+		EXTERN	WideTimer0A_Handler
 __Vectors
         DCD     StackMem + Stack            ; Top of Stack
         DCD     Reset_Handler               ; Reset Handler
@@ -367,7 +369,7 @@ IntDefaultHandler\
                 EXPORT  Comp2_Handler             [WEAK]
                 EXPORT  SysCtl_Handler            [WEAK]
                 EXPORT  FlashCtl_Handler          [WEAK]
-                EXPORT  GPIOPortF_Handler         [WEAK]
+;                EXPORT  GPIOPortF_Handler         [WEAK]
                 EXPORT  GPIOPortG_Handler         [WEAK]
                 EXPORT  GPIOPortH_Handler         [WEAK]
                 EXPORT  UART2_Handler             [WEAK]
@@ -407,7 +409,7 @@ IntDefaultHandler\
                 EXPORT  Timer4B_Handler           [WEAK]
                 EXPORT  Timer5A_Handler           [WEAK]
                 EXPORT  Timer5B_Handler           [WEAK]
-                EXPORT  WideTimer0A_Handler       [WEAK]
+;                EXPORT  WideTimer0A_Handler       [WEAK]
                 EXPORT  WideTimer0B_Handler       [WEAK]
                 EXPORT  WideTimer1A_Handler       [WEAK]
                 EXPORT  WideTimer1B_Handler       [WEAK]
@@ -482,7 +484,7 @@ Comp1_Handler
 Comp2_Handler
 SysCtl_Handler
 FlashCtl_Handler
-GPIOPortF_Handler
+;GPIOPortF_Handler
 GPIOPortG_Handler
 GPIOPortH_Handler
 UART2_Handler
@@ -522,7 +524,7 @@ Timer4A_Handler
 Timer4B_Handler
 Timer5A_Handler
 Timer5B_Handler
-WideTimer0A_Handler
+;WideTimer0A_Handler
 WideTimer0B_Handler
 WideTimer1A_Handler
 WideTimer1B_Handler
