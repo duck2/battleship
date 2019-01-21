@@ -10,6 +10,8 @@ STCTRL EQU 0xE000E010
 STRELOAD EQU 0xE000E014
 STCURRENT EQU 0xE000E018
 
+WTIMER0_CTL	EQU 0x4003600C
+
 deploy_ships EQU 0
 deploy_ships_end EQU 1
 p2_wait EQU 2
@@ -49,6 +51,7 @@ mine4_y DCD 0
 	THUMB
 	EXTERN civship_btn_flag
 	EXTERN battleship_btn_flag
+	EXTERN countdown
 	EXTERN init_screen
 	EXTERN init_pots
 	EXTERN init_buttons
@@ -63,12 +66,60 @@ mine4_y DCD 0
 	EXPORT __main
 	ENTRY
 
+poll_adc PROC
+	PUSH {LR}
+	LDR R1, =ADC0_SSFIFO1
+	LDR R0, [R1]
+	LDR R2, =cursor_y
+	MOV R3, #29
+	MUL R0, R0, R3
+	MOV R3, #0xFFF
+	UDIV R0, R0, R3
+	ADD R0, R0, #9
+	STR R0, [R2]
+
+	LDR R1, =ADC1_SSFIFO2
+	LDR R0, [R1]
+	LDR R2, =cursor_x
+	MOV R3, #62
+	MUL R0, R0, R3
+	MOV R3, #0xFFF
+	UDIV R0, R0, R3
+	ADD R0, R0, #7
+	STR R0, [R2]
+	POP {LR}
+	BX LR
+	ENDP
+
+enable_adc PROC
+	PUSH {LR}
+	LDR R1, =ADC1_PSSI
+	LDR R0, [R1]
+	LDR R2, =0x88000004
+	ORR R0, R0, R2
+	STR R0, [R1]
+	LDR R1, =ADC1_ISC
+	MOV R0, #0x04
+	STR R0, [R1]
+
+	LDR R1, =ADC0_PSSI
+	LDR R0, [R1]
+	LDR R2, =0x88000002
+	ORR R0, R0, R2
+	STR R0, [R1]
+	LDR R1, =ADC0_ISC
+	MOV R0, #0x02
+	STR R0, [R1]
+	POP {LR}
+	BX LR
+	ENDP
+
 ; input -> update -> draw -> post-input...
 __main
 	BL init_screen
 	BL init_pots
 	BL init_buttons
-;	BL init_timer
+	BL init_timer
 	MOV R12, #deploy_ships
 	MOV R11, #0
 
@@ -95,7 +146,7 @@ _update
 	CMP R12, #p2_peek
 	BEQ _p2_peek
 	CMP R12, #deploy_mines
-	BEQ _deploy_mines
+	BEQ.W _deploy_mines
 	CMP R12, #check_winner
 	BEQ.W _check_winner
 	CMP R12, #p1_wins
@@ -109,10 +160,6 @@ _deploy_ships
 	MOV R10, #0
 	LDR R0, [R1]
 	CMP R0, #0
-	LDR R1, =battleship_count	; increment battleship count
-	LDR R0, [R1]
-	ADD R0, R0, #1
-	STR R0, [R1]
 	BNE __put_ship
 	LDR R1, =civship_btn_flag
 	MOV R10, #1
@@ -127,6 +174,13 @@ __put_ship				; XXX: add bounds check
 	LDR R1, =civship_btn_flag
 	MOV R0, #0
 	STR R0, [R1]
+	CMP R10, #0	
+	BNE __real_put_ship			; if not battleship, go on placing
+	LDR R1, =battleship_count	; if battleship, increment battleship count
+	LDR R0, [R1]
+	ADD R0, R0, #1
+	STR R0, [R1]
+__real_put_ship
 	LDR R1, =cursor_x
 	LDR R0, [R1]
 	LDR R1, =cursor_y
@@ -190,6 +244,15 @@ _p2_peek				; a small draw-wait so we don't pollute draw
 L3  LDR R0, [R1]
 	ANDS R0, #0x10000
 	BEQ L3
+							; when 0.5s is over, set countdown to 20, enable timer, deploy mines
+	LDR	R1,=countdown
+	MOV	R0,#20
+	STR	R0,[R1]
+	LDR	R1,=WTIMER0_CTL  ;BURASI MAIN IÇINDE STLENECEK
+	LDR	R0,[R1]
+	ORR	R0,#0x01
+	STR	R0,[R1]
+
 	MOV R9, #0	; we don't know what will happen to R9...
 	MOV R12, #deploy_mines
 	B _post_input
@@ -232,7 +295,7 @@ Lmine
 	SUB R6, R6, #1
 	MOV R7, #4
 Lship
-	CMP R6, #0
+	CMP R7, #0
 	BEQ Lmine
 	SUB R7, R7, #1
 load_data
@@ -263,7 +326,7 @@ load_data
 	LDR R8, [R1]
 check_mine_ship			; R5=shipN_y, R4=mineN_y, R3=shipN_x, R2=mineN_x, R8=shipN_type
 	SUBS R5, R4, R5		; if mineN_y - shipN_y >= 8, no collision
-	CMP R4, #8
+	CMP R5, #8
 	BGT Lship
 	SUBS R3, R2, R3		; if mineN_x - shipN_x >= 8, no collision
 	CMP R3, #8
@@ -308,6 +371,7 @@ _p1_wins
 	MOV R2, #1
 	BL draw_digit
 	MOV R0, #40
+	MOV R2, #1
 	BL draw_digit
 	BL send_frame
 	LDR R1, =battleship_btn_flag
@@ -334,6 +398,7 @@ _draw_p2_and_exit
 
 _draw_deploy_mines
 	BL draw_arena
+	BL draw_timer
 	B _draw_cursor
 
 _draw_game
@@ -388,51 +453,25 @@ exit
 	BX LR
 	ENDP
 
-poll_adc
-	PUSH {LR}
-	LDR R1, =ADC0_SSFIFO1
-	LDR R0, [R1]
-	LDR R2, =cursor_y
-	MOV R3, #29
-	MUL R0, R0, R3
-	MOV R3, #0xFFF
-	UDIV R0, R0, R3
-	ADD R0, R0, #9
-	STR R0, [R2]
-
-	LDR R1, =ADC1_SSFIFO2
-	LDR R0, [R1]
-	LDR R2, =cursor_x
-	MOV R3, #62
-	MUL R0, R0, R3
-	MOV R3, #0xFFF
-	UDIV R0, R0, R3
-	ADD R0, R0, #7
-	STR R0, [R2]
-	POP {LR}
+draw_timer PROC
+	PUSH {R0-R6, LR}
+	LDR R3, =countdown
+	LDR R4, [R3]
+	MOV R0, #10
+	UDIV R5, R4, R0
+	MUL R6, R5, R0
+	SUB R4, R4, R6
+	MOV R0, #70
+	MOV R1, #0
+	MOV R2, R5
+	BL draw_digit
+	MOV R0, #76
+	MOV R1, #0
+	MOV R2, R4
+	BL draw_digit
+	POP {R0-R6, LR}
 	BX LR
-
-enable_adc
-	PUSH {LR}
-	LDR R1, =ADC1_PSSI
-	LDR R0, [R1]
-	LDR R2, =0x88000004
-	ORR R0, R0, R2
-	STR R0, [R1]
-	LDR R1, =ADC1_ISC
-	MOV R0, #0x04
-	STR R0, [R1]
-
-	LDR R1, =ADC0_PSSI
-	LDR R0, [R1]
-	LDR R2, =0x88000002
-	ORR R0, R0, R2
-	STR R0, [R1]
-	LDR R1, =ADC0_ISC
-	MOV R0, #0x02
-	STR R0, [R1]
-	POP {LR}
-	BX LR
+	ENDP
 
 done
 	B done
