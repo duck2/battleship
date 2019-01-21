@@ -97,7 +97,11 @@ _update
 	CMP R12, #deploy_mines
 	BEQ _deploy_mines
 	CMP R12, #check_winner
-	BEQ _check_winner
+	BEQ.W _check_winner
+	CMP R12, #p1_wins
+	BEQ.W _p1_wins
+	CMP R12, #p2_wins
+	BEQ.W _p2_wins
 
 ; Deployment stage. R11 is ship count. R10 is ship type(0=battle, 1=civ)
 _deploy_ships
@@ -105,6 +109,10 @@ _deploy_ships
 	MOV R10, #0
 	LDR R0, [R1]
 	CMP R0, #0
+	LDR R1, =battleship_count	; increment battleship count
+	LDR R0, [R1]
+	ADD R0, R0, #1
+	STR R0, [R1]
 	BNE __put_ship
 	LDR R1, =civship_btn_flag
 	MOV R10, #1
@@ -134,7 +142,7 @@ __put_ship				; XXX: add bounds check
 	STR R10, [R3]		; [R3] <- ship_type
 	ADD R11, R11, #1	; ship_count++
 	CMP R11, #4			; if ship_count == 4, game_state <- deploy_ships_end
-	BNE _draw
+	BNE.W _draw
 	MOV R12, #deploy_ships_end
 	B _post_input
 
@@ -142,7 +150,7 @@ _deploy_ships_end
 	LDR R1, =battleship_btn_flag
 	LDR R0, [R1]
 	CMP R0, #0
-	BEQ _draw
+	BEQ.W _draw
 	MOV R0, #0
 	STR R0, [R1]		; clear button flag
 	MOV R12, #p2_wait
@@ -152,7 +160,7 @@ _p2_wait
 	LDR R1, =battleship_btn_flag
 	LDR R0, [R1]
 	CMP R0, #0
-	BEQ _draw
+	BEQ.W _draw
 	MOV R0, #0
 	STR R0, [R1]		; clear button flag
 	MOV R12, #p2_peek
@@ -182,6 +190,7 @@ _p2_peek				; a small draw-wait so we don't pollute draw
 L3  LDR R0, [R1]
 	ANDS R0, #0x10000
 	BEQ L3
+	MOV R9, #0	; we don't know what will happen to R9...
 	MOV R12, #deploy_mines
 	B _post_input
 
@@ -214,25 +223,97 @@ __put_mine
 	B _post_input
 
 _check_winner
-	MOV R0, #4			; R0(mine_i) <- 4, R1(ship_i) <- 4
-	MOV R1, #4
-	LDR R1, =mine1_x
+	LDR R1, =battleship_count
+	LDR R9, [R1]		; R9 is remaining battleships
+	MOV R6, #4			; R6 is mineN, R7 is shipN
+Lmine
+	CMP R6, #0
+	BEQ check_results
+	SUB R6, R6, #1
+	MOV R7, #4
+Lship
+	CMP R6, #0
+	BEQ Lmine
+	SUB R7, R7, #1
+load_data
+	LDR R1, =mine1_x	; R2 = &mineN_x = &mine1_x + 8*mineN
+	MOV R0, #8
+	MUL R0, R0, R6
+	ADD R1, R1, R0
 	LDR R2, [R1]
-	LDR R1, =ship1_x
+	LDR R1, =ship1_x	; R3 = &shipN_x = &ship1_x + 12*shipN
+	MOV R0, #12
+	MUL R0, R0, R7
+	ADD R1, R1, R0
 	LDR R3, [R1]
-	LDR R1, =mine1_y
+	LDR R1, =mine1_y	; R4 = &mineN_y = &mine1_x + 8*mineN
+	MOV R0, #8
+	MUL R0, R0, R6
+	ADD R1, R1, R0
 	LDR R4, [R1]
-	LDR R1, =ship1_y
+	LDR R1, =ship1_y	; R5 = &shipN_y = &ship1_y + 12*shipN
+	MOV R0, #12
+	MUL R0, R0, R7
+	ADD R1, R1, R0
 	LDR R5, [R1]
+	LDR R1, =ship1_type	; R8 = &shipN_type = &ship1_type + 12*shipN
+	MOV R0, #12
+	MUL R0, R0, R7
+	ADD R1, R1, R0
+	LDR R8, [R1]
+check_mine_ship			; R5=shipN_y, R4=mineN_y, R3=shipN_x, R2=mineN_x, R8=shipN_type
 	SUBS R5, R4, R5		; if mineN_y - shipN_y >= 8, no collision
 	CMP R4, #8
-	BGT miss
+	BGT Lship
 	SUBS R3, R2, R3		; if mineN_x - shipN_x >= 8, no collision
 	CMP R3, #8
-	BGT miss
-	LDR R2, =ship1_type ; if collision, check type of ship
+	BGT Lship
+	LDR R1, =ship1_type ; if collision, check type of ship
+	LDR R0, [R1]
+	CMP R0, #0
+	BNE goto_p1_wins	; if not battleship, p1 wins.
+	SUB R9, R9, #1		; else, reduce battleship count
+	B Lship
+check_results
+	CMP R9, #0
+	BLE goto_p2_wins
+	B goto_p1_wins
 
-E	
+goto_p1_wins
+	MOV R12, #p1_wins
+	B _post_input
+goto_p2_wins
+	MOV R12, #p2_wins
+	B _post_input
+
+_p2_wins
+	BL clear_frame
+	MOV R0, #30
+	MOV R1, #20
+	MOV R2, #2
+	BL draw_digit
+	MOV R0, #40
+	BL draw_digit
+	BL send_frame
+	LDR R1, =battleship_btn_flag
+L4	LDR R0, [R1]
+	CMP R0, #0
+	BEQ L4
+	B __main
+
+_p1_wins
+	BL clear_frame
+	MOV R0, #30
+	MOV R1, #20
+	MOV R2, #1
+	BL draw_digit
+	MOV R0, #40
+	BL draw_digit
+	BL send_frame
+	LDR R1, =battleship_btn_flag
+L5	LDR R0, [R1]
+	CMP R0, #0
+	BEQ L5
 	B __main
 
 _draw
