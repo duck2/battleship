@@ -15,7 +15,7 @@ PORTF_IM		EQU		0X40025410
 SYSCTL_RCGCGPIO	EQU		0X400FE608
 NVIC_EN0		EQU		0xE000E100
 
-	AREA |.data|, READWRITE, DATA
+	AREA |.ARM.__at_0x20001700|, READWRITE, DATA
 	EXPORT battleship_btn_flag
 	EXPORT civship_btn_flag
 battleship_btn_flag DCD 0
@@ -29,9 +29,9 @@ civship_btn_flag DCD 0
 GPIOPortF_Handler PROC
 			LDR		R1,=PORTF_MIS
 			LDR		R0,[R1]
-			ANDS	R0,#0X01
+			ANDS	R2,R0,#0X01
 			BNE		battleship
-			ANDS	R0,#0X10
+			ANDS	R2,R0,#0X10
 			BNE		civship
 			B		ok
 			

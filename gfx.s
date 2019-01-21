@@ -3,7 +3,7 @@
 FB_ADDR EQU 0x20000500
 ; linker fails to get framebuffer address reliably
 ; see http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0474h/CHDBBAEE.html
-	AREA |.ARM.__at_0x20000500|, READWRITE, DATA
+	AREA |.ARM.__at_0x20001000|, READWRITE, DATA
 framebuffer
 	SPACE 504
 
@@ -78,6 +78,7 @@ L4	LDRB R0, [R2]
 ; blit single byte to framebuffer. R0=X, R1=Y, R2=byte.
 ; it is particularly hard because FB is bit-based.
 blit_byte
+	PUSH {R0-R5, LR}
 	LDR R3, =FB_ADDR
 	LSR R4, R1, #3 ; Y position in the buffer corresponds to Y/8 -> R4
 	MOV R5, #84
@@ -97,6 +98,7 @@ blit_byte
 	LDRB R0, [R3]
 	ORR R0, R0, R5
 	STRB R0, [R3] ; and blit the second half
+	POP {R0-R5, LR}
 	BX LR
 
 ; blit a sprite on the screen. R0=X, R1=Y, R2=sprite addr, R3=sprite size
@@ -117,27 +119,27 @@ L5	LDRB R4, [R2], #1
 
 ; R0=X, R1=Y
 draw_battleship
-	PUSH {LR}
+	PUSH {R0-R5, LR}
 	LDR R2, =battleship
 	MOV R3, #0x8
 	BL draw_sprite
-	POP {LR}
+	POP {R0-R5, LR}
 	BX LR
 
 draw_civship
-	PUSH {LR}
+	PUSH {R0-R5, LR}
 	LDR R2, =civship
 	MOV R3, #0x8
 	BL draw_sprite
-	POP {LR}
+	POP {R0-R5, LR}
 	BX LR
 
 draw_cursor
-	PUSH {LR}
+	PUSH {R0-R5, LR}
 	LDR R2, =cursor
 	MOV R3, #0x4
 	BL draw_sprite
-	POP {LR}
+	POP {R0-R5, LR}
 	BX LR
 
 ; R0: X, R1: Y, R2: digit
